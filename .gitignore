@@ -1,4 +1,4 @@
 node_modules
-dist
 test/instrumented/
 *.nupkg
+*.orig

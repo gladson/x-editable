@@ -58,30 +58,33 @@ List - abstract class for inputs that have source option loaded from js array or
         // ------------- additional functions ------------
 
         onSourceReady: function (success, error) {
+            //run source if it function
+            var source;
+            if ($.isFunction(this.options.source)) {
+                source = this.options.source.call(this.options.scope);
+                this.sourceData = null;
+                //note: if function returns the same source as URL - sourceData will be taken from cahce and no extra request performed
+            } else {
+                source = this.options.source;
+            }            
+            
             //if allready loaded just call success
-            if($.isArray(this.sourceData)) {
+            if(this.options.sourceCache && $.isArray(this.sourceData)) {
                 success.call(this);
                 return; 
             }
 
-            // try parse json in single quotes (for double quotes jquery does automatically)
+            //try parse json in single quotes (for double quotes jquery does automatically)
             try {
-                this.options.source = $.fn.editableutils.tryParseJson(this.options.source, false);
+                source = $.fn.editableutils.tryParseJson(source, false);
             } catch (e) {
                 error.call(this);
                 return;
             }
-            
-            var source = this.options.source;
-            
-            //run source if it function
-            if ($.isFunction(source)) {
-                source = source.call(this.options.scope);
-            }
 
             //loading from url
             if (typeof source === 'string') {
-                //try to get from cache
+                //try to get sourceData from cache
                 if(this.options.sourceCache) {
                     var cacheID = source,
                     cache;
@@ -114,8 +117,8 @@ List - abstract class for inputs that have source option loaded from js array or
                     }
                 }
                 
-                //loading sourceData from server
-                $.ajax({
+                //ajaxOptions for source. Can be overwritten bt options.sourceOptions
+                var ajaxOptions = $.extend({
                     url: source,
                     type: 'get',
                     cache: false,
@@ -150,7 +153,11 @@ List - abstract class for inputs that have source option loaded from js array or
                              $.each(cache.err_callbacks, function () { this.call(); }); 
                         }
                     }, this)
-                });
+                }, this.options.sourceOptions);
+                
+                //loading sourceData from server
+                $.ajax(ajaxOptions);
+                
             } else { //options as json/array
                 this.sourceData = this.makeArray(source);
                     
@@ -276,8 +283,15 @@ List - abstract class for inputs that have source option loaded from js array or
           
         If **function**, it should return data in format above (since 1.4.0).
         
-        Since 1.4.1 key `children` supported to render OPTGROUP (for **select** input only).  
-        `[{text: "group1", children: [{value: 1, text: "text1"}, {value: 2, text: "text2"}]}, ...]` 
+        Since 1.4.1 key `children` supported to render OPTGROUP (for **select** input only):  
+        @example
+        [
+          {text: "group1", children: [
+            {value: 1, text: "text1"}, 
+            {value: 2, text: "text2"}
+          ]}, 
+          ...
+        ] 
 
 		
         @property source 
@@ -302,7 +316,7 @@ List - abstract class for inputs that have source option loaded from js array or
         **/          
         sourceError: 'Error when loading list',
         /**
-        if <code>true</code> and source is **string url** - results will be cached for fields with the same source.    
+        if `true` and source is **string url** - results will be cached for fields with the same source.    
         Usefull for editable column in grid to prevent extra requests.
         
         @property sourceCache 
@@ -310,7 +324,23 @@ List - abstract class for inputs that have source option loaded from js array or
         @default true
         @since 1.2.0
         **/        
-        sourceCache: true
+        sourceCache: true,
+        /**
+        Additional ajax options to be used in $.ajax() when loading list from server.
+        Useful to send extra parameters or change request method.
+        
+        @property sourceOptions 
+        @type object|function
+        @default null
+        @since 1.5.0
+        @example
+        sourceOptions: {
+            data: {param: 123},
+            type: 'post'
+        }
+        
+        **/        
+        sourceOptions: null
     });
 
     $.fn.editabletypes.list = List;      

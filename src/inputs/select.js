@@ -5,7 +5,7 @@ Select (dropdown)
 @extends list
 @final
 @example
-<a href="#" id="status" data-type="select" data-pk="1" data-url="/post" data-original-title="Select status"></a>
+<a href="#" id="status" data-type="select" data-pk="1" data-url="/post" data-title="Select status"></a>
 <script>
 $(function(){
     $('#status').editable({
@@ -31,14 +31,24 @@ $(function(){
     $.extend(Select.prototype, {
         renderList: function() {
             this.$input.empty();
+            var escape = this.options.escape;
 
             var fillItems = function($el, data) {
+                var attr;
                 if($.isArray(data)) {
                     for(var i=0; i<data.length; i++) {
+                        attr = {};
                         if(data[i].children) {
-                           $el.append(fillItems($('<optgroup>', {label: data[i].text}), data[i].children)); 
+                            attr.label = data[i].text;
+                            $el.append(fillItems($('<optgroup>', attr), data[i].children)); 
                         } else {
-                           $el.append($('<option>', {value: data[i].value}).text(data[i].text)); 
+                            attr.value = data[i].value;
+                            if(data[i].disabled) {
+                                attr.disabled = true;
+                            }
+                            var $option = $('<option>', attr);
+                            $option[escape ? 'text' : 'html'](data[i].text);
+                            $el.append($option);
                         }
                     }
                 }
@@ -65,7 +75,8 @@ $(function(){
                 text = items[0].text;
             }
             
-            $(element).text(text);
+            //$(element).text(text);
+            $.fn.editabletypes.abstractinput.prototype.value2html.call(this, text, element);
         },
         
         autosubmit: function() {
